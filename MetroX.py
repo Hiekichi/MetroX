@@ -22,6 +22,8 @@ FRAME_W = 120
 FRAME_H = 120
 FRAME_LIMIT = 88
 
+wspeed = 2
+
 tarus = [ [], [], [], [], [] ]
 
 class MyChar():
@@ -30,16 +32,16 @@ class MyChar():
         self.y = y
         self.w = 16
         self.h = 16
-        self.dir = D_NONE  # 0:下 1:上  2:右  3:左  4:静止状態
         self.is_run = False
         self.jump_cnt = 0
         self.flash_cnt = 0
         self.tumble_cnt = 0
+        self.slow_cnt = 0
     def update(self):
         if self.tumble_cnt > 0:
             pass
         elif self.is_run:
-            self.x += 1
+            self.x += wspeed
     def draw(self):
         # ジャンプ中
         if self.jump_cnt > 24:
@@ -104,9 +106,19 @@ class App():
         ]
 
     def update(self):
-        global frame_x,stage_w,tarus
+        global frame_x,stage_w,tarus,wspeed
         ### ステージごとのカウンター
         self.cnt += 1
+        ### 床に沿って移動速度を変更
+        if myChar.jump_cnt == 0:
+            tile = pyxel.tilemaps[0].pget((myChar.x+12)//8,(myChar.y+16)//8)
+            if 21<=tile[1]<=22:
+                myChar.slow_cnt = 48
+                wspeed = 1
+        if myChar.slow_cnt > 0:
+            myChar.slow_cnt -= 1
+            if myChar.slow_cnt == 0:
+                wspeed = 2
         ### マイキャラのイベント処理
         # ゲーム開始カウントダウン
         if self.gamestart_cnt > 0:
@@ -140,19 +152,13 @@ class App():
         ### マイキャラの更新
         myChar.update()
 
-        # ステージの端に行った時にスクロールしなくするための処理
+        # キャラ移動に沿った背景スクロール処理
         if myChar.x-frame_x > FRAME_W - FRAME_LIMIT and frame_x != stage_w - FRAME_W:
-            frame_x += 1
+            frame_x += wspeed
             if frame_x > stage_w - FRAME_W:
                 frame_x = stage_w - FRAME_W
-        #if (myChar.x - frame_x) < FRAME_LIMIT and frame_x != 0:
-        #    frame_x -= 1
-        #    if frame_x < 0:
-        #        frame_x = 0
         # ステージ両端における移動可能範囲の処理
         myChar.x = max(min(stage_w - 16,myChar.x), 0)
-        # ベルト上における上下移動可能範囲の処理
-        #myChar.y = max(min(80,myChar.y), 50)
 
         ### 樽の更新
         for tarurec in tarus:
@@ -168,12 +174,13 @@ class App():
             for taru in tarus[lane]:
                 if abs((taru.x-5)-(myChar.x-8)) < 10:
                     #myChar.flash_cnt = 48
-                    myChar.tumble_cnt = 24
+                    myChar.tumble_cnt = 36
 
     def draw(self):
         ### 背景描画
         pyxel.cls(0)
-        pyxel.bltm(0,0, 0, frame_x,128*8, FRAME_W,FRAME_H)
+        #pyxel.bltm(0,0, 0, frame_x,128*8, FRAME_W,FRAME_H)
+        pyxel.bltm(0,0, 0, frame_x,0, FRAME_W,FRAME_H)
         #pyxel.blt(10,10, 2, 0,0, 100,44, 8)
 
         ### 樽の描画
@@ -188,6 +195,9 @@ class App():
 
         ###### デバッグ用 ###########################
         #pyxel.text(10,10, "frame_x:{}".format(frame_x),7)
+        pyxel.text(10,10, "TILE: {}".format(pyxel.tilemaps[0].pget((myChar.x+12)//8,(myChar.y+16)//8)),7)
+        pyxel.text(10,20, "x:  {}".format((myChar.x+12)//8),7)
+        pyxel.text(10,30, "y:  {}".format((myChar.y+16)//8),7)
         #pyxel.text(10,20, "myChar.x:{}".format(myChar.x),7)
         #pyxel.text(70,20, "myChar.x-frame_x:\n{}".format(myChar.x-frame_x),7)
         #pyxel.text(10,30, "myChar.y:{}".format(myChar.y),7)
